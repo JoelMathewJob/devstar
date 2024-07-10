@@ -83,7 +83,9 @@
     backgroundColor = color;
     
   }
-
+  function closeColorPicker() {
+    showColorPicker = false;
+  }
   
 </script>
 
