@@ -1,56 +1,208 @@
-<script>	
-	import { Search } from 'flowbite-svelte';	
-	import { Card } from 'flowbite-svelte';	
-	export let data;
-	let query = '';	
-	$: results = Object.values(data.tools).filter((tool) => {	
-		return (tool.name.toLowerCase().includes(query.toLowerCase()) || tool.description.toLowerCase().includes(query.toLowerCase()));	
-	});	
-</script>	
+<script>
+    import * as cloud from 'd3-cloud';
 
-<section class="bg-white dark:bg-gray-900">	
-	<div class="py-8 px-4 mx-auto max-w-screen-xl text-center lg:px-12">	
-		<!-- <a href="#" class="inline-flex justify-between items-center py-1 px-1 pr-4 mb-7 text-sm text-gray-700 bg-gray-100 rounded-full dark:bg-gray-800 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700">	
-			<span class="text-xs bg-blue-600 rounded-full text-white px-4 py-1.5 mr-3">New</span>	
-			<span class="text-sm font-medium">Phase-I launched! Explore the story</span>	
-			<i class="icon-angle-right ml-2" />	
-		</a> -->	
-		<h1 class="mb-4 text-4xl font-extrabold tracking-tight leading-none text-gray-900 md:text-5xl lg:text-6xl dark:text-white">	
-			A Comprehensive Developer Toolkit	
-		</h1>	
-		<p class="mb-8 text-lg font-normal text-gray-500 lg:text-xl sm:px-16 xl:px-48 dark:text-gray-400">	
-			Maximize your efficiency and productivity as a developer with our free online developer	toolkit. Experience the convenience of our user-friendly platform and unlock your full potential.
-		</p>	
-		<div class="px-4 mx-auto text-center md:max-w-screen-md lg:max-w-screen-lg lg:px-36">	
-			<Search bind:value={query} />	
-		</div>	
-	</div>	
-</section><section class="bg-white dark:bg-gray-900">	
-	<div class="py-4 px-4 mx-auto max-w-screen-xl">	
-		{#if results.length}	
-			<div class="grid gap-2 space-y-0 grid-cols-2 lg:grid-cols-4">	
-				{#each results as tool}	
-					<Card href={tool.link}>	
-						<!-- <i class="icon-{tool.icon} mb-2 text-gray-500 dark:text-gray-400 text-4xl" />	 -->
-						<h5 class="text-lg font-semibold tracking-tight text-gray-900 dark:text-white">	
-							{tool.name}	
-						</h5>
-						<p>{tool.description.length > 80 ? tool.description.substring(0, 80) + '...' : tool.description}</p>
-					</Card>	
-				{/each}	
-			</div>	
-		{:else}	
-			<div class="mx-auto max-w-screen-xl">	
-				<div class="mx-auto max-w-screen-sm text-center">	
-					<p class="mb-4 text-3xl tracking-tight font-bold text-gray-900 md:text-4xl dark:text-white">	
-						No Results Found	
-					</p>	
-					<p class="mb-4 text-lg font-light text-gray-500 dark:text-gray-400">	
-						We couldn't find any matching tool	
-					</p>	
-					<a href="/contact" class="font-medium text-sm px-5 py-2.5 text-center my-4 text-gray-500 dark:text-gray-400 underline">Request this tool</a>	
-				</div>	
-			</div>	
-		{/if}	
-	</div>	
-</section>
+    let userInput = "";
+    let wordData = [];
+    const colorNames = ["blue", "orange", "green", "red", "purple", "brown", "pink", "gray", "yellow", "cyan"];
+    let width = 800;
+    let height = 600;
+    let layout;
+
+    let fontSize = 0; // Initialize to 0
+    let fontType = ''; // Initialize as an empty string
+    let fontColor = ''; // Initialize as an empty string
+    const fontTypes = [
+        'Arial', 'Courier New', 'Georgia', 'Times New Roman', 'Verdana', 
+        'Nunito', 'Roboto', 'Lato', 'Oswald', 'Montserrat', 
+        'Raleway', 'Poppins', 'Merriweather', 'Ubuntu', 'Playfair Display', 
+        'Open Sans', 'Lobster', 'Raleway', 'Slabo 27px', 'PT Sans'
+    ];
+
+    const generateWordCloud = () => {
+        if (fontSize <= 0 || !fontType || !fontColor) {
+            alert("Please select font size, font type, and font color");
+            return;
+        }
+        const words = userInput.split(/\s+/).map(word => ({ text: word, size: Math.random() * 100 + fontSize }));
+        layout = cloud()
+            .size([width, height])
+            .words(words)
+            .padding(5)
+            .rotate(() => ~~(Math.random() * 2) * 90)
+            .font(fontType)
+            .fontSize(d => d.size)
+            .on("end", draw);
+
+        layout.start();
+    };
+
+    const draw = words => {
+        wordData = words.map(word => ({
+            ...word,
+            x: word.x,
+            y: word.y,
+            rotate: word.rotate,
+            size: word.size,
+            text: word.text
+        }));
+    };
+
+    const downloadImage = () => {
+        const svgElement = document.getElementById('wordCloud');
+        const serializer = new XMLSerializer();
+        const source = serializer.serializeToString(svgElement);
+
+        const svgBlob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'wordcloud.svg';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+</script>
+
+<svelte:head>
+    <title>Word Cloud Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lobster&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Slabo+27px&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap" rel="stylesheet">
+</svelte:head>
+
+<div class="card gap-16 items-center mx-auto max-w-screen-xl lg:grid lg:grid-cols-2 overflow-hidden rounded-lg">
+    <section>
+        <label for="words">
+            <h2 class="text-white m-5">Enter Words:</h2>
+            <textarea id="words" bind:value={userInput} rows="4" cols="50"></textarea>
+        </label>
+        
+        <label for="fontSizeRange">
+            <h2 class="text-white m-5">Font Size:</h2>
+            <input id="fontSizeRange" type="range" min="0" max="100" bind:value={fontSize} />
+            <input id="fontSizeInput" type="number" min="0" max="100" bind:value={fontSize} />
+        </label>
+
+        <label for="fontType">
+            <h2 class="text-white m-5">Font Type:</h2>
+            <select id="fontType" bind:value={fontType}>
+                <option value="" disabled selected>Select an option</option>
+                {#each fontTypes as type}
+                    <option value={type}>{type}</option>
+                {/each}
+            </select>
+        </label>
+
+        <label for="fontColor">
+            <h2 class="text-white m-5">Font Color:</h2>
+            <select id="fontColor" bind:value={fontColor}>
+                <option value="" disabled selected>Select an option</option>
+                {#each colorNames as color}
+                    <option value={color} style="color: {color};">{color}</option>
+                {/each}
+            </select>
+        </label>
+
+        <button on:click={generateWordCloud}>Generate Word Cloud</button>
+        <button on:click={downloadImage}>Download as SVG</button>
+
+        <svg id="wordCloud" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
+            {#if wordData.length > 0}
+                <g transform={`translate(${width / 2}, ${height / 2})`}>
+                    {#each wordData as word}
+                        <text
+                            x={word.x}
+                            y={word.y}
+                            style="font-size: {word.size}px; fill: {fontColor}; transform: translate(${word.x}px, ${word.y}px) rotate({word.rotate}deg); font-family: {fontType};">
+                            {word.text}
+                        </text>
+                    {/each}
+                </g>
+            {/if}
+        </svg>
+    </section>
+</div>
+
+<style>
+    .card {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 16px;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    section {
+        font-family: 'Nunito', sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        text-align: center;
+    }
+
+    h1 {
+        font-size: 2em;
+        margin-bottom: 20px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 10px;
+        font-size: 1.2em;
+    }
+
+    textarea, select, input[type="number"], input[type="range"] {
+        width: 100%;
+        font-size: 1em;
+        padding: 10px;
+        border: 2px solid #ccc;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        resize: vertical;
+    }
+
+    button {
+        font-size: 1em;
+        padding: 10px 20px;
+        background-color: #1f77b4;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        margin-right: 10px;
+    }
+
+    button:hover {
+        background-color: #155a8a;
+    }
+
+    #wordCloud {
+        border: 2px solid #ccc;
+        border-radius: 10px;
+        margin-top: 20px;
+        background-color: #f9f9f9;
+    }
+
+    text {
+        text-anchor: middle;
+        alignment-baseline: middle;
+    }
+</style>
+
